@@ -43,7 +43,7 @@ pub const S3UploadResult = union(enum) {
     failure: S3Error,
 };
 pub const S3DeleteResult = union(enum) {
-    success: void,
+    success: bool,
     not_found: S3Error,
 
     /// failure error is not owned and need to be copied if used after this callback
@@ -258,7 +258,7 @@ pub const S3HttpSimpleTask = struct {
             .delete => |callback| {
                 switch (response.status_code) {
                     200, 204 => {
-                        callback(.{ .success = {} }, this.callback_context);
+                        callback(.{ .success = true }, this.callback_context);
                     },
                     404 => {
                         this.errorWithBody(.not_found);

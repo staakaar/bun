@@ -1079,7 +1079,7 @@ declare module "bun" {
      *       console.error("Delete failed:", err);
      *     }
      */
-    static delete(path: string, options?: S3Options): Promise<void>;
+    static delete(path: string, options?: S3Options): Promise<boolean>;
 
     /**
      * Get the size of a file in bytes.
