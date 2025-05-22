@@ -411,6 +411,7 @@ pub const S3BlobStatTask = struct {
                     stat_result.etag,
                     stat_result.contentType,
                     stat_result.lastModified,
+                    stat_result.headers,
                     globalThis,
                 ).toJS(globalThis));
             },

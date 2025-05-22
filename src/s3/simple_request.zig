@@ -11,6 +11,17 @@ const ACL = @import("./acl.zig").ACL;
 const StorageClass = @import("./storage_class.zig").StorageClass;
 const ListObjects = @import("./list_objects.zig");
 
+pub const S3Header = struct {
+    name: []const u8,
+    value: []const u8,
+
+    pub fn fromPicoHeader(header: picohttp.Header) S3Header {
+        return .{
+            .name = header.name,
+            .value = header.value,
+        };
+    }
+};
 pub const S3StatResult = union(enum) {
     success: struct {
         size: usize = 0,
@@ -20,6 +31,7 @@ pub const S3StatResult = union(enum) {
         lastModified: []const u8 = "",
         /// format: text/plain, contentType is not owned and need to be copied if used after this callback
         contentType: []const u8 = "",
+        headers: []S3Header = &.{},
     },
     not_found: S3Error,
 
@@ -238,12 +250,18 @@ pub const S3HttpSimpleTask = struct {
             .stat => |callback| {
                 switch (response.status_code) {
                     200 => {
+                        var s3Header = std.ArrayList(S3Header).init(bun.default_allocator);
+                        defer s3Header.deinit();
+                        for (response.headers.list) |header| {
+                            _ = s3Header.append(S3Header.fromPicoHeader(header)) catch {};
+                        }
                         callback(.{
                             .success = .{
                                 .etag = response.headers.get("etag") orelse "",
                                 .lastModified = response.headers.get("last-modified") orelse "",
                                 .contentType = response.headers.get("content-type") orelse "",
                                 .size = if (response.headers.get("content-length")) |content_len| (std.fmt.parseInt(usize, content_len, 10) catch 0) else 0,
+                                .headers = s3Header.items,
                             },
                         }, this.callback_context);
                     },
