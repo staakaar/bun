@@ -1,5 +1,6 @@
 const bun = @import("bun");
 const JSC = bun.JSC;
+const S3Header = @import("../../s3/simple_request.zig").S3Header;
 
 pub const S3Stat = struct {
     const log = bun.Output.scoped(.S3Stat, false);
@@ -14,6 +15,7 @@ pub const S3Stat = struct {
     etag: bun.String,
     contentType: bun.String,
     lastModified: f64,
+    headers: []S3Header,
 
     pub fn constructor(globalThis: *JSC.JSGlobalObject, _: *JSC.CallFrame) bun.JSError!*@This() {
         return globalThis.throwInvalidArguments("S3Stat is not constructable", .{});
@@ -24,18 +26,14 @@ pub const S3Stat = struct {
         etag: []const u8,
         contentType: []const u8,
         lastModified: []const u8,
+        headers: []S3Header,
         globalThis: *JSC.JSGlobalObject,
     ) *@This() {
         var date_str = bun.String.init(lastModified);
         defer date_str.deref();
         const last_modified = date_str.parseDate(globalThis);
 
-        return S3Stat.new(.{
-            .size = size,
-            .etag = bun.String.createUTF8(etag),
-            .contentType = bun.String.createUTF8(contentType),
-            .lastModified = last_modified,
-        });
+        return S3Stat.new(.{ .size = size, .etag = bun.String.createUTF8(etag), .contentType = bun.String.createUTF8(contentType), .lastModified = last_modified, .headers = headers });
     }
 
     pub fn getSize(this: *@This(), _: *JSC.JSGlobalObject) JSC.JSValue {
@@ -52,6 +50,10 @@ pub const S3Stat = struct {
 
     pub fn getLastModified(this: *@This(), globalObject: *JSC.JSGlobalObject) JSC.JSValue {
         return JSC.JSValue.fromDateNumber(globalObject, this.lastModified);
+    }
+
+    pub fn getHeaders(this: *@This(), globalObject: *JSC.JSGlobalObject) JSC.JSValue {
+        return this.headers.toJS(globalObject, this.headers);
     }
 
     pub fn finalize(this: *@This()) void {
